@@ -1,0 +1,19 @@
+# Default simulation settings.
+# Command-line arguments override these values.
+games: 1000
+players: 3
+strategy: random
+seed: 1
+max_turns: 500
+verbose: false
+reveal_opponent_card_counts: false
+
+# Optional deck cards:
+# normal, skip, attack, shuffle, favor, alter_the_future, see_the_future.
+# Leave include_cards empty/null to use every optional card.
+include_cards:
+exclude_cards: []
+
+# Combo rules are optional hand-pattern actions.
+# Known combo rules: two_of_a_kind.
+enabled_combo_rules: [two_of_a_kind]
