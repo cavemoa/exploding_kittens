@@ -9,7 +9,13 @@ import random
 import yaml
 
 from exploding_kittens.actions import Action, GameAction
-from exploding_kittens import DrawOnlyAgent, GameEngine, RandomAgent, SkipIfPossibleAgent
+from exploding_kittens import (
+    DrawOnlyAgent,
+    GameEngine,
+    RandomAgent,
+    SafeRuleAgent,
+    SkipIfPossibleAgent,
+)
 from exploding_kittens.cards import DECK_CARD_REGISTRY
 from exploding_kittens.combo_rules import COMBO_RULE_REGISTRY, ComboRule
 
@@ -19,6 +25,7 @@ DEFAULT_CONFIG_PATH = Path("game_config.yaml")
 AGENTS = {
     "draw-only": DrawOnlyAgent,
     "random": RandomAgent,
+    "safe-rule": SafeRuleAgent,
     "skip-if-possible": SkipIfPossibleAgent,
 }
 

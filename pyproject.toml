@@ -9,6 +9,9 @@ description = "A small pure Python Exploding Kittens simulation for learning gam
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "gymnasium>=1.0",
+    "numpy>=1.26",
+    "pettingzoo>=1.24",
     "PyYAML>=6.0",
 ]
 

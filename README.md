@@ -9,10 +9,11 @@ The first milestone is intentionally plain Python. PettingZoo can come later as 
 - A simplified game engine in `src/exploding_kittens/engine.py`
 - Card classes in `src/exploding_kittens/cards.py`
 - Actions represented as an enum in `src/exploding_kittens/actions.py`
-- Three simple agents:
+- Four simple agents:
   - `RandomAgent`
   - `DrawOnlyAgent`
   - `SkipIfPossibleAgent`
+  - `SafeRuleAgent`
 - A simulation script in `scripts/run_simulation.py`
 - A focused pytest suite in `tests/test_engine.py`
 
@@ -64,6 +65,28 @@ for action, card_names in observation.legal_actions_with_card_names():
 ```
 
 For example, a Two of a Kind action with `card_indexes=(2, 3)` can be mapped back to `("skip", "skip")` before the agent decides whether that pair is worth spending.
+
+For reinforcement-learning wrappers, `ActionEncoder` maps concrete `GameAction` objects to a stable integer action space and produces action masks:
+
+```python
+encoder = ActionEncoder(max_hand_size=32, max_players=5)
+action_id = encoder.encode(action, observation)
+game_action = encoder.decode(action_id, observation)
+mask = encoder.action_mask(observation)
+```
+
+The current integer layout supports draw actions, single-card hand-slot actions, targeted single-card actions, targeted two-card combo actions, and a reserved range for later named-card choices.
+
+`ObservationEncoder` converts `GameObservation` into fixed-shape numeric arrays:
+
+```python
+encoder = ObservationEncoder(max_hand_size=32, max_players=5)
+encoded = encoder.encode(observation)
+vector = encoded["observation"]
+mask = encoded["action_mask"]
+```
+
+The vector includes own-hand slots, own hand counts, discard counts, draw pile size, living player count, attack turn debt, and known top cards from `SeeTheFutureCard`. Opponent hand sizes are included only when the encoder is configured with `include_opponent_card_counts=True`.
 
 Hidden information stays hidden from observations:
 
@@ -185,7 +208,77 @@ Try the other baseline strategies:
 ```powershell
 venv\Scripts\python.exe scripts\run_simulation.py --games 1000 --strategy draw-only
 venv\Scripts\python.exe scripts\run_simulation.py --games 1000 --strategy skip-if-possible
+venv\Scripts\python.exe scripts\run_simulation.py --games 1000 --strategy safe-rule
 ```
+
+## PettingZoo Wrapper
+
+The simulator can also run as a PettingZoo AEC environment:
+
+```python
+from exploding_kittens import pettingzoo_env
+
+env = pettingzoo_env(players=3, enabled_combo_rules=("two_of_a_kind",))
+env.reset(seed=1)
+
+for agent in env.agent_iter():
+    observation, reward, termination, truncation, info = env.last()
+    if termination or truncation:
+        action = None
+    else:
+        action = env.action_space(agent).sample(observation["action_mask"])
+    env.step(action)
+```
+
+The PettingZoo observation is a dictionary containing a numeric `observation` vector and an `action_mask`. The wrapper uses `GameEngine` for all rule logic and `ActionEncoder` / `ObservationEncoder` for the RL-facing interface.
+
+The wrapper starts with sparse rewards:
+
+- winner: `+1`
+- eliminated player: `-1`
+- max-turn truncation: `0`
+
+Each agent's cumulative total for the current episode is available in `info["episode_reward"]`.
+
+Run a random masked PettingZoo rollout:
+
+```powershell
+venv\Scripts\python.exe scripts\run_pettingzoo_random.py --players 3 --seed 4 --enabled-combo-rules two_of_a_kind
+```
+
+## Single-Agent Gymnasium Wrapper
+
+For single-policy reinforcement learning experiments, the project also includes a Gymnasium wrapper that trains one learner seat against scripted opponents:
+
+```python
+from exploding_kittens import SingleAgentEnv
+
+env = SingleAgentEnv(
+    players=3,
+    learner="player_1",
+    opponent_strategy="safe-rule",
+    enabled_combo_rules=("two_of_a_kind",),
+)
+
+observation, info = env.reset(seed=1)
+action = env.action_space.sample(observation["action_mask"])
+observation, reward, terminated, truncated, info = env.step(action)
+```
+
+The wrapper exposes only the learner's encoded observation and action mask. Scripted opponents act automatically until it is the learner's turn again or the episode ends.
+
+Supported scripted opponent strategies are:
+
+- `random`
+- `draw-only`
+- `safe-rule`
+- `skip-if-possible`
+
+Rewards match the current sparse training setup from the PettingZoo wrapper:
+
+- learner wins: `+1`
+- learner is eliminated: `-1`
+- max-turn truncation: `0`
 
 ## Good Next Steps
 
