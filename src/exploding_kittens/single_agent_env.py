@@ -195,6 +195,11 @@ class SingleAgentEnv(gym.Env[dict[str, np.ndarray], int]):
     def close(self) -> None:
         return None
 
+    def action_masks(self) -> np.ndarray:
+        """Return legal action masks for sb3-contrib MaskablePPO."""
+
+        return self._encoded_observation()["action_mask"].astype(bool)
+
     def _game_seed(self, seed: int | None) -> int:
         if seed is not None:
             return seed

@@ -17,6 +17,12 @@ venv/
 # Environment files
 .env
 .env.*
+documents/WandB_key.md
+
+# Experiment outputs
+models/
+reports/
+wandb/
 
 # IDE/editor
 .idea/
@@ -25,4 +31,3 @@ venv/
 # OS files
 Thumbs.db
 .DS_Store
-

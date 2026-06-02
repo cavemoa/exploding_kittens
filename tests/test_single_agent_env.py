@@ -98,3 +98,14 @@ def test_single_agent_env_supports_scripted_opponent_strategies() -> None:
 
         assert environment.observation_space.contains(observation)
         assert info["opponent_strategy"] == strategy
+
+
+def test_single_agent_env_exposes_bool_action_masks_for_maskable_ppo() -> None:
+    environment = SingleAgentEnv(players=2, opponent_strategy="draw-only")
+    observation, _ = environment.reset(seed=1)
+
+    action_masks = environment.action_masks()
+
+    assert action_masks.dtype == bool
+    assert action_masks.shape == observation["action_mask"].shape
+    assert action_masks.sum() == observation["action_mask"].sum()

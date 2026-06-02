@@ -19,6 +19,16 @@ dependencies = [
 dev = [
     "pytest>=8.0",
 ]
+tracking = [
+    "wandb>=0.17",
+]
+training = [
+    "stable-baselines3>=2.3",
+    "sb3-contrib>=2.3",
+]
+multiagent = [
+    "ray[rllib]>=2.40",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

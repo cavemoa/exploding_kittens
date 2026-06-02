@@ -280,6 +280,103 @@ Rewards match the current sparse training setup from the PettingZoo wrapper:
 - learner is eliminated: `-1`
 - max-turn truncation: `0`
 
+## WandB Experiment Tracking
+
+Weights & Biases is optional and is used for experiment tracking rather than core gameplay. Install the tracking extra when you want to log evaluation runs:
+
+```powershell
+venv\Scripts\python.exe -m pip install -e ".[dev,tracking]"
+```
+
+Run a local evaluation without WandB:
+
+```powershell
+venv\Scripts\python.exe scripts\evaluate_single_agent.py --episodes 10 --players 3 --opponent-strategy safe-rule --wandb-mode disabled
+```
+
+Run the same evaluation with offline WandB logging:
+
+```powershell
+venv\Scripts\python.exe scripts\evaluate_single_agent.py --episodes 10 --players 3 --opponent-strategy safe-rule --wandb-mode offline
+```
+
+Use `--wandb-mode online` after `wandb login` to sync runs to the WandB dashboard.
+
+The evaluator currently uses a random masked learner policy. It logs aggregate metrics such as win rate, average reward, average turns, and truncation rate. It also logs per-episode metrics and, for the first few episodes, a trace table with action IDs, action kinds, rewards, turn counts, visible game state, and known top cards.
+
+## Mask-Aware PPO Training
+
+The first training loop uses `sb3-contrib` `MaskablePPO` so the learner respects legal action masks instead of wasting updates on impossible moves. Install the training extra first:
+
+```powershell
+venv\Scripts\python.exe -m pip install -e ".[dev,tracking,training]"
+```
+
+Run a tiny local smoke train against draw-only opponents:
+
+```powershell
+venv\Scripts\python.exe scripts\train_single_agent.py --total-timesteps 64 --players 2 --opponent-strategy draw-only --wandb-mode disabled
+```
+
+Run the same style of training with offline WandB logging:
+
+```powershell
+venv\Scripts\python.exe scripts\train_single_agent.py --total-timesteps 64 --players 2 --opponent-strategy draw-only --wandb-mode offline
+```
+
+Models are saved under `models/`, which is ignored by Git. WandB training runs log the configuration, `train/episode_reward`, `train/episode_length`, and final evaluation metrics such as `eval/win_rate`, `eval/average_reward`, and `eval/average_turns`.
+
+Evaluate a saved MaskablePPO model against several scripted opponents:
+
+```powershell
+venv\Scripts\python.exe scripts\evaluate_agent.py --model-path models\maskable_ppo_single_agent_seed_1.zip --episodes 10 --opponent-strategies draw-only,random,safe-rule --wandb-mode disabled
+```
+
+Use `--wandb-mode offline` or `--wandb-mode online` to log the saved-policy comparison. The evaluator reports win rate, average reward, average turns survived, truncation rate, defuses, explosions, and cards played by type for each opponent strategy.
+
+Run a complete visible training experiment in one command:
+
+```powershell
+venv\Scripts\python.exe scripts\run_training_experiment.py --total-timesteps 5000 --episodes 100 --training-opponent-strategy draw-only --opponent-strategies draw-only,random,safe-rule --wandb-mode offline
+```
+
+This trains a MaskablePPO model, evaluates it against the listed opponents, evaluates a random masked learner against the same opponents, prints a side-by-side comparison table, logs comparison metrics to WandB, and writes a JSON summary under `reports/`.
+
+## Multi-Policy 3-Player Evaluation
+
+For multi-seat experiments, train 3-player-compatible policies first:
+
+```powershell
+venv\Scripts\python.exe scripts\train_single_agent.py --players 3 --opponent-strategy random --total-timesteps 5000 --run-name ppo_3p_a --wandb-mode offline
+venv\Scripts\python.exe scripts\train_single_agent.py --players 3 --opponent-strategy random --total-timesteps 5000 --run-name ppo_3p_b --wandb-mode offline
+```
+
+Then evaluate two trained seats against one random baseline:
+
+```powershell
+venv\Scripts\python.exe scripts\evaluate_multi_policy_game.py --players 3 --episodes 100 --seat-policies player_1=model:models\ppo_3p_a_seed_1.zip,player_2=model:models\ppo_3p_b_seed_1.zip,player_3=random --wandb-mode offline
+```
+
+The multi-policy evaluator reports per-seat win rate, average reward, average turns survived, defuses, explosions, cards played by type, combined trained-agent win rate, and random-agent win rate. It can also log a `multi_policy/seat_comparison` table to WandB.
+
+## RLlib Shared-Policy Smoke Training
+
+RLlib is the first multi-agent training framework we are trying. Install the multi-agent extra when you want to run it:
+
+```powershell
+venv\Scripts\python.exe -m pip install -e ".[dev,tracking,training,multiagent]"
+```
+
+Run a tiny 3-player shared-policy PPO smoke job:
+
+```powershell
+venv\Scripts\python.exe scripts\train_rllib_pettingzoo.py --iterations 1 --players 3 --max-turns 50 --train-batch-size 32 --minibatch-size 16 --rollout-fragment-length 16 --num-epochs 1 --wandb-mode disabled
+```
+
+The script wraps the existing PettingZoo environment with RLlib's `PettingZooEnv`, maps every seat to one shared policy, and uses Ray's old-API `TorchActionMaskModel` so illegal actions remain masked during training. Checkpoints are saved under `models/rllib/`, which is ignored by Git.
+
+Use `--wandb-mode offline` or `--wandb-mode online` to log RLlib smoke metrics such as sampled environment steps, sampled agent steps, mean episode reward, and mean episode length.
+
 ## Good Next Steps
 
 1. Add more deterministic rule tests.
