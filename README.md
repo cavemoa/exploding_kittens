@@ -124,6 +124,85 @@ flowchart TD
 
 The important design boundary is that agents do not receive the full engine. They receive a `GameObservation` plus legal concrete actions. The engine remains responsible for rule correctness and hidden information.
 
+## How Agents Learn
+
+At the simplest level, an agent is something that receives an observation and chooses one legal action. A scripted agent does this with hand-written rules. An RLlib agent does it with a neural-network policy.
+
+During RLlib training, the policy starts with mostly unhelpful behavior. It repeatedly plays games, receives rewards, and updates its neural-network weights so actions that tended to lead to better outcomes become more likely in similar future situations.
+
+```mermaid
+sequenceDiagram
+    participant Env as PettingZoo/RLlib Env
+    participant Engine as GameEngine
+    participant Obs as Observation + Action Mask
+    participant Policy as RLlib Policy
+    participant PPO as PPO Optimizer
+
+    Env->>Engine: Ask for current player's state
+    Engine->>Obs: Build legal observation
+    Obs->>Policy: Encoded vector + legal action mask
+    Policy->>Env: Choose integer action id
+    Env->>Engine: Decode to GameAction and step game
+    Engine-->>Env: Events, next player, terminal state
+    Env-->>Policy: Reward signal
+    Policy-->>PPO: Store experience
+    PPO->>Policy: Periodically update weights
+```
+
+The important objects are:
+
+| Piece | Meaning |
+| --- | --- |
+| Observation | What the agent is allowed to know. |
+| Action mask | Which integer actions are legal right now. |
+| Policy | The model that chooses an action from the observation and mask. |
+| Reward | Numeric feedback saying how good the outcome was. |
+| PPO update | The training step that adjusts the policy using collected games. |
+
+### When Rewards Arrive
+
+The current serious RLlib setup uses `terminal-rank` rewards:
+
+```yaml
+reward:
+  profile: terminal-rank
+  terminal_rank_rewards: [1.0, 0.3, -0.3, -1.0]
+```
+
+That means agents do not receive a meaningful reward after every individual card play. Instead, the game runs until there is a winner, then each player receives a reward based on final placement:
+
+| Finish | Reward |
+| --- | --- |
+| 1st | `+1.0` |
+| 2nd | `+0.3` |
+| 3rd | `-0.3` |
+| 4th | `-1.0` |
+
+So the agent must learn from delayed feedback. If a sequence of actions tends to make the agent survive longer or win more often, PPO should gradually reinforce that behavior.
+
+### How PPO Reinforces Behavior
+
+Training is batched. The policy plays many turns across many games, then PPO updates the neural network from that collected experience. The relevant config values are:
+
+| Config | Meaning |
+| --- | --- |
+| `train_batch_size` | How much experience RLlib collects before an update. |
+| `minibatch_size` | How that experience is split during optimization. |
+| `num_epochs` | How many passes PPO makes over each training batch. |
+| `lr` | Learning rate; how strongly each update changes the policy. |
+| `iterations` | How many train/update cycles to run. |
+
+In the current 4-player separate-per-seat setup, each seat has its own trainable policy:
+
+```text
+player_1 -> player_1_policy
+player_2 -> player_2_policy
+player_3 -> player_3_policy
+player_4 -> player_4_policy
+```
+
+That is why evaluation also includes `randomized-seat-rank`: it checks whether each policy is becoming a generally good player, not just good from its usual chair.
+
 ## Engine And Rules
 
 The engine supports two or more players. Each player starts with one `Defuse`. The current player may draw or play legal cards/combo actions. The game ends when one player remains.
