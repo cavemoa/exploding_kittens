@@ -1,0 +1,53 @@
+game:
+  players: 4
+  seed: 141
+  max_turns: 600
+  include_cards:
+  exclude_cards: []
+  enabled_combo_rules:
+    - two_of_a_kind
+  reveal_opponent_card_counts: false
+
+reward:
+  profile: terminal-rank
+  terminal_rank_rewards: [1.0, 0.3, -0.3, -1.0]
+
+training:
+  iterations: 150
+  train_batch_size: 2048
+  minibatch_size: 512
+  rollout_fragment_length: 128
+  num_epochs: 5
+  lr: 0.0001
+  num_env_runners: 0
+
+model:
+  hidden_layers: [64, 64, 64]
+  activation: relu # tanh
+
+experiment:
+  checkpoint_dir: models/rllib
+  run_name: 4seat_64_relu_150
+  checkpoint_interval: 10
+  evaluation_interval: 10
+  evaluation_episodes: 100
+  evaluation_opponents:
+    - random
+    - safe-rule
+    - draw-only
+  evaluation_scope: randomized-seat-rank
+  continue_mode: same-run
+  wandb_mode: online
+  wandb_project: exploding-kittens
+  wandb_entity:
+  show_progress: true
+  suppress_ray_warnings: true
+
+dashboard_logging:
+  enabled: true
+  experiment_dir: reports/experiments
+  run_name:
+  flush_each_iteration: true
+
+policy_setup:
+  mode: separate-per-seat

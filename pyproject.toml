@@ -13,6 +13,7 @@ dependencies = [
     "numpy>=1.26",
     "pettingzoo>=1.24",
     "PyYAML>=6.0",
+    "tqdm>=4.66",
 ]
 
 [project.optional-dependencies]
@@ -28,6 +29,10 @@ training = [
 ]
 multiagent = [
     "ray[rllib]>=2.40",
+]
+ui = [
+    "flet[all]>=0.85.2",
+    "flet-charts>=0.85.2",
 ]
 
 [tool.setuptools.packages.find]

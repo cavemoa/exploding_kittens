@@ -1,0 +1,42 @@
+game:
+  players: 3
+  seed: 31
+  max_turns: 50
+  include_cards:
+  exclude_cards: []
+  enabled_combo_rules: []
+  reveal_opponent_card_counts: false
+
+training:
+  iterations: 1
+  train_batch_size: 32
+  minibatch_size: 16
+  rollout_fragment_length: 16
+  num_epochs: 1
+  lr: 0.0003
+  num_env_runners: 0
+
+experiment:
+  checkpoint_dir: models/rllib
+  run_name: rllib_separate_per_seat_smoke
+  checkpoint_interval:
+  evaluation_interval:
+  evaluation_episodes: 3
+  evaluation_opponents:
+    - random
+    - safe-rule
+    - draw-only
+  wandb_mode: disabled
+  wandb_project: exploding-kittens
+  wandb_entity:
+  show_progress: true
+  suppress_ray_warnings: true
+
+dashboard_logging:
+  enabled: true
+  experiment_dir: reports/experiments
+  run_name:
+  flush_each_iteration: true
+
+policy_setup:
+  mode: separate-per-seat

@@ -15,6 +15,11 @@ from .engine import GameEngine, IllegalActionError
 from .observation_encoding import ObservationEncoder
 
 
+SPARSE_REWARD_PROFILE = "sparse"
+TERMINAL_RANK_REWARD_PROFILE = "terminal-rank"
+REWARD_PROFILES = (SPARSE_REWARD_PROFILE, TERMINAL_RANK_REWARD_PROFILE)
+
+
 def env(**kwargs: Any) -> AECEnv:
     environment = raw_env(**kwargs)
     environment = wrappers.AssertOutOfBoundsWrapper(environment)
@@ -39,6 +44,8 @@ class raw_env(AECEnv[str, dict[str, np.ndarray], int]):
         exclude_cards: tuple[str, ...] = (),
         enabled_combo_rules: tuple[str, ...] = (),
         reveal_opponent_card_counts: bool = False,
+        reward_profile: str = SPARSE_REWARD_PROFILE,
+        terminal_rank_rewards: tuple[float, ...] | None = None,
         max_hand_size: int = 32,
         render_mode: str | None = None,
     ) -> None:
@@ -48,6 +55,10 @@ class raw_env(AECEnv[str, dict[str, np.ndarray], int]):
             raise ValueError("max_turns must be at least 1.")
         if max_hand_size < 1:
             raise ValueError("max_hand_size must be at least 1.")
+        if reward_profile not in REWARD_PROFILES:
+            raise ValueError(
+                "reward_profile must be one of: " + ", ".join(REWARD_PROFILES)
+            )
         if render_mode not in (None, "ansi"):
             raise ValueError("render_mode must be None or 'ansi'.")
 
@@ -58,6 +69,11 @@ class raw_env(AECEnv[str, dict[str, np.ndarray], int]):
         self.exclude_cards = exclude_cards
         self.enabled_combo_rules = enabled_combo_rules
         self.reveal_opponent_card_counts = reveal_opponent_card_counts
+        self.reward_profile = reward_profile
+        self.terminal_rank_rewards = normalize_terminal_rank_rewards(
+            players,
+            terminal_rank_rewards,
+        )
         self.max_hand_size = max_hand_size
         self.render_mode = render_mode
 
@@ -105,8 +121,10 @@ class raw_env(AECEnv[str, dict[str, np.ndarray], int]):
         self.truncations: dict[str, bool] = {}
         self.infos: dict[str, dict[str, Any]] = {}
         self.episode_rewards: dict[str, float] = {}
+        self._elimination_order: list[str] = []
         self._rewarded_eliminations: set[str] = set()
         self._winner_rewarded = False
+        self._rank_rewards_applied = False
         self.agent_selection: str | None = None
 
     @lru_cache(maxsize=None)
@@ -138,8 +156,10 @@ class raw_env(AECEnv[str, dict[str, np.ndarray], int]):
         self.terminations = {agent: False for agent in self.agents}
         self.truncations = {agent: False for agent in self.agents}
         self.episode_rewards = {agent: 0.0 for agent in self.agents}
+        self._elimination_order = []
         self._rewarded_eliminations = set()
         self._winner_rewarded = False
+        self._rank_rewards_applied = False
         self.infos = {agent: self._info_for(agent) for agent in self.agents}
         self.agent_selection = self.engine.current_player.name
 
@@ -172,7 +192,7 @@ class raw_env(AECEnv[str, dict[str, np.ndarray], int]):
         except IllegalActionError as exc:
             raise ValueError(str(exc)) from exc
 
-        self._apply_sparse_rewards(events)
+        self._apply_rewards(events)
         self._update_done_flags()
         self._sync_infos()
         self._advance_agent_selection()
@@ -223,6 +243,18 @@ class raw_env(AECEnv[str, dict[str, np.ndarray], int]):
         else:
             self.agent_selection = self.engine.current_player.name
 
+    def _apply_rewards(self, events: list[Any]) -> None:
+        self._record_eliminations(events)
+        if self.reward_profile == TERMINAL_RANK_REWARD_PROFILE:
+            self._apply_terminal_rank_rewards()
+            return
+        self._apply_sparse_rewards(events)
+
+    def _record_eliminations(self, events: list[Any]) -> None:
+        for event in events:
+            if event.kind == "eliminated" and event.player not in self._elimination_order:
+                self._elimination_order.append(event.player)
+
     def _apply_sparse_rewards(self, events: list[Any]) -> None:
         if self.engine is None:
             return
@@ -236,6 +268,29 @@ class raw_env(AECEnv[str, dict[str, np.ndarray], int]):
         if self.engine.is_over and winner is not None and not self._winner_rewarded:
             self._add_reward(winner, 1.0)
             self._winner_rewarded = True
+
+    def _apply_terminal_rank_rewards(self) -> None:
+        if self.engine is None:
+            return
+        if not self.engine.is_over or self.engine.winner is None:
+            return
+        if self._rank_rewards_applied:
+            return
+
+        for rank_index, agent in enumerate(self._ranked_agents()):
+            self._add_reward(agent, self.terminal_rank_rewards[rank_index])
+        self._rank_rewards_applied = True
+
+    def _ranked_agents(self) -> tuple[str, ...]:
+        if self.engine is None or self.engine.winner is None:
+            return ()
+        winner = self.engine.winner
+        eliminated_latest_first = [
+            agent for agent in reversed(self._elimination_order) if agent != winner
+        ]
+        ranked = [winner, *eliminated_latest_first]
+        ranked.extend(agent for agent in self.possible_agents if agent not in ranked)
+        return tuple(ranked[: self.player_count])
 
     def _add_reward(self, agent: str, amount: float) -> None:
         if agent not in self.rewards:
@@ -252,3 +307,27 @@ class raw_env(AECEnv[str, dict[str, np.ndarray], int]):
             "episode_reward": self.episode_rewards.get(agent, 0.0),
             "winner": winner,
         }
+
+
+def normalize_terminal_rank_rewards(
+    players: int,
+    rewards: tuple[float, ...] | None,
+) -> tuple[float, ...]:
+    if rewards is None:
+        return default_terminal_rank_rewards(players)
+    normalized = tuple(float(reward) for reward in rewards)
+    if len(normalized) != players:
+        raise ValueError(
+            "terminal_rank_rewards must contain exactly "
+            f"{players} value(s), one for each finishing rank."
+        )
+    return normalized
+
+
+def default_terminal_rank_rewards(players: int) -> tuple[float, ...]:
+    if players == 2:
+        return (1.0, -1.0)
+    if players == 4:
+        return (1.0, 0.3, -0.3, -1.0)
+    step = 2.0 / (players - 1)
+    return tuple(1.0 - rank_index * step for rank_index in range(players))

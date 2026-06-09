@@ -21,6 +21,7 @@ from .observations import GameObservation
 from .observation_encoding import ObservationEncoder
 from .pettingzoo_env import env as pettingzoo_env
 from .pettingzoo_env import raw_env as RawPettingZooEnv
+from .policy_pool import PolicyPool, PolicyPoolEntry
 from .single_agent_env import SCRIPTED_OPPONENTS, SingleAgentEnv
 
 __all__ = [
@@ -43,6 +44,8 @@ __all__ = [
     "ObservationEncoder",
     "PlayerState",
     "pettingzoo_env",
+    "PolicyPool",
+    "PolicyPoolEntry",
     "RandomAgent",
     "RawPettingZooEnv",
     "SafeRuleAgent",

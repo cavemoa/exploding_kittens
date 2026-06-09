@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import json
 from pathlib import Path
 from typing import Any, Protocol
@@ -86,6 +86,8 @@ class MultiPolicyEpisodeResult:
     defuses: dict[str, int]
     explosions: dict[str, int]
     cards_played: dict[str, dict[str, int]]
+    action_counts: dict[str, dict[str, int]] = field(default_factory=dict)
+    elimination_order: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -99,6 +101,7 @@ class SeatEvaluationResult:
     defuses: int
     explosions: int
     cards_played: dict[str, int]
+    action_counts: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -297,6 +300,10 @@ def run_multi_policy_episode(
     cards_played: dict[str, Counter[str]] = {
         player: Counter() for player in player_names
     }
+    action_counts: dict[str, Counter[str]] = {
+        player: Counter() for player in player_names
+    }
+    elimination_order: list[str] = []
 
     while not engine.is_over and engine.turn_count < max_turns:
         observation = engine.observe(engine.current_player.name)
@@ -308,6 +315,7 @@ def run_multi_policy_episode(
             np_rng,
             py_rng,
         )
+        action_counts[observation.player][action.kind.value] += 1
         engine.step(action)
 
         new_events = engine.events[event_cursor:]
@@ -317,6 +325,8 @@ def run_multi_policy_episode(
                 defuses[event.player] += 1
             if event.kind == "eliminated":
                 explosions[event.player] += 1
+                if event.player not in elimination_order:
+                    elimination_order.append(event.player)
                 rewards[event.player] -= 1.0
                 turns_survived[event.player] = engine.turn_count
             if event.kind in COUNTED_CARD_EVENTS:
@@ -344,6 +354,11 @@ def run_multi_policy_episode(
             player: dict(sorted(counter.items()))
             for player, counter in cards_played.items()
         },
+        action_counts={
+            player: dict(sorted(counter.items()))
+            for player, counter in action_counts.items()
+        },
+        elimination_order=tuple(elimination_order),
     )
 
 
@@ -357,8 +372,10 @@ def summarize_evaluation(
     seat_results: list[SeatEvaluationResult] = []
     for seat in player_names:
         cards_played: Counter[str] = Counter()
+        action_counts: Counter[str] = Counter()
         for episode in episode_results:
             cards_played.update(episode.cards_played[seat])
+            action_counts.update(episode.action_counts.get(seat, {}))
         wins = sum(episode.winner == seat for episode in episode_results)
         seat_results.append(
             SeatEvaluationResult(
@@ -377,6 +394,7 @@ def summarize_evaluation(
                 defuses=sum(episode.defuses[seat] for episode in episode_results),
                 explosions=sum(episode.explosions[seat] for episode in episode_results),
                 cards_played=dict(sorted(cards_played.items())),
+                action_counts=dict(sorted(action_counts.items())),
             )
         )
 

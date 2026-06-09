@@ -283,8 +283,8 @@ Testable outcome: multiple policies can train or evaluate in the same environmen
    - [ ] learner policy versus frozen opponent policies
 4. [ ] Add self-play evaluation.
 5. [x] Save policy checkpoints.
-6. [ ] Compare trained policies against scripted baselines.
-7. [ ] Track whether seat order creates a strong advantage.
+6. [x] Compare trained policies against scripted baselines.
+7. [x] Track whether seat order creates a strong advantage.
 
 ## Phase 9A: RLlib Smoke Training
 
@@ -315,117 +315,139 @@ Testable outcome: we have a clear, staged path from RLlib smoke training to a re
 
 Testable outcome: saved RLlib checkpoints can be loaded and evaluated against scripted and learned opponents.
 
-1. [ ] Add `scripts/evaluate_rllib_checkpoint.py`.
-2. [ ] Load an RLlib checkpoint saved by `scripts/train_rllib_pettingzoo.py`.
-3. [ ] Support one shared RLlib policy for all learner-controlled seats.
-4. [ ] Support scripted opponent seats:
-   - [ ] `random`
-   - [ ] `safe-rule`
-   - [ ] `draw-only`
-   - [ ] `skip-if-possible`
-5. [ ] Support seat assignment syntax similar to multi-policy evaluation:
-   - [ ] `player_1=rllib:<checkpoint_path>`
-   - [ ] `player_2=random`
-   - [ ] `player_3=safe-rule`
-6. [ ] Evaluate fixed checkpoints over many games with deterministic seeds.
-7. [ ] Report per-seat metrics:
-   - [ ] win rate
-   - [ ] average reward
-   - [ ] average turns survived
-   - [ ] explosions
-   - [ ] defuses
-   - [ ] cards played by type
-8. [ ] Report grouped metrics:
-   - [ ] RLlib-controlled win rate
-   - [ ] scripted-opponent win rate
-   - [ ] seat-order advantage
-9. [ ] Log the evaluation table to WandB.
-10. [ ] Add focused tests for checkpoint-evaluation helpers without requiring a long RLlib run.
-11. [ ] Run one tiny RLlib checkpoint evaluation smoke test.
+1. [x] Add `scripts/evaluate_rllib_checkpoint.py`.
+2. [x] Load an RLlib checkpoint saved by `scripts/train_rllib_pettingzoo.py`.
+3. [x] Support one shared RLlib policy for all learner-controlled seats.
+4. [x] Support scripted opponent seats:
+   - [x] `random`
+   - [x] `safe-rule`
+   - [x] `draw-only`
+   - [x] `skip-if-possible`
+5. [x] Support seat assignment syntax similar to multi-policy evaluation:
+   - [x] `player_1=rllib:<checkpoint_path>`
+   - [x] `player_2=random`
+   - [x] `player_3=safe-rule`
+6. [x] Evaluate fixed checkpoints over many games with deterministic seeds.
+7. [x] Report per-seat metrics:
+   - [x] win rate
+   - [x] average reward
+   - [x] average turns survived
+   - [x] explosions
+   - [x] defuses
+   - [x] cards played by type
+8. [x] Report grouped metrics:
+   - [x] RLlib-controlled win rate
+   - [x] scripted-opponent win rate
+   - [x] seat-order advantage
+9. [x] Log the evaluation table to WandB.
+10. [x] Add focused tests for checkpoint-evaluation helpers without requiring a long RLlib run.
+11. [x] Run one tiny RLlib checkpoint evaluation smoke test.
 
 ### 9B.2 Training Configuration Files
 
 Testable outcome: longer RLlib jobs can be started from versionable config files instead of fragile command lines.
 
-1. [ ] Add an RLlib training config YAML format.
-2. [ ] Include core game settings:
-   - [ ] players
-   - [ ] max turns
-   - [ ] seed
-   - [ ] included cards
-   - [ ] excluded cards
-   - [ ] enabled combo rules
-   - [ ] hidden-information flags
-3. [ ] Include PPO settings:
-   - [ ] iterations
-   - [ ] learning rate
-   - [ ] train batch size
-   - [ ] minibatch size
-   - [ ] rollout fragment length
-   - [ ] number of epochs
-   - [ ] number of environment runners
-4. [ ] Include experiment settings:
-   - [ ] run name
-   - [ ] checkpoint interval
-   - [ ] evaluation interval
-   - [ ] WandB mode
-   - [ ] WandB project
-5. [ ] Save the resolved config beside each checkpoint.
-6. [ ] Add README examples for smoke, medium, and longer runs.
+1. [x] Add an RLlib training config YAML format.
+2. [x] Include core game settings:
+   - [x] players
+   - [x] max turns
+   - [x] seed
+   - [x] included cards
+   - [x] excluded cards
+   - [x] enabled combo rules
+   - [x] hidden-information flags
+3. [x] Include PPO settings:
+   - [x] iterations
+   - [x] learning rate
+   - [x] train batch size
+   - [x] minibatch size
+   - [x] rollout fragment length
+   - [x] number of epochs
+   - [x] number of environment runners
+4. [x] Include experiment settings:
+   - [x] run name
+   - [x] checkpoint interval
+   - [x] evaluation interval
+   - [x] WandB mode
+   - [x] WandB project
+5. [x] Save the resolved config beside each checkpoint.
+6. [x] Add README examples for smoke, medium, and longer runs.
 
 ### 9B.3 Serious Shared-Policy Training
 
 Testable outcome: one shared RLlib policy trains for long enough to produce meaningful baseline comparisons.
 
-1. [ ] Add checkpoint intervals during training.
-2. [ ] Add evaluation intervals during training.
-3. [ ] Evaluate against scripted baselines during training:
-   - [ ] random
-   - [ ] safe-rule
-   - [ ] draw-only
-4. [ ] Log evaluation metrics to WandB as separate charts from training metrics.
-5. [ ] Track action distribution during evaluation.
-6. [ ] Track illegal action rate, expected to stay at `0`.
-7. [ ] Track cards played by type.
-8. [ ] Track combo use.
-9. [ ] Run a medium shared-policy training job.
-10. [ ] Compare the final checkpoint against the first checkpoint and scripted baselines.
+1. [x] Add checkpoint intervals during training.
+2. [x] Add evaluation intervals during training.
+3. [x] Evaluate against scripted baselines during training:
+   - [x] random
+   - [x] safe-rule
+   - [x] draw-only
+4. [x] Log evaluation metrics to WandB as separate charts from training metrics.
+5. [x] Track action distribution during evaluation.
+6. [x] Track illegal action rate, expected to stay at `0`.
+7. [x] Track cards played by type.
+8. [x] Track combo use.
+9. [x] Run a medium shared-policy training job.
+10. [x] Compare the final checkpoint against the first checkpoint and scripted baselines.
 
 ### 9B.4 Self-Play Policy Pool
 
 Testable outcome: training can sample opponents from a small pool of scripted policies and previous checkpoints.
 
-1. [ ] Define a policy-pool data structure.
-2. [ ] Add pool entries for scripted policies:
-   - [ ] random
-   - [ ] safe-rule
-   - [ ] draw-only
-3. [ ] Add pool entries for RLlib checkpoints:
-   - [ ] latest checkpoint
-   - [ ] previous checkpoint
-   - [ ] best checkpoint by evaluation win rate
-4. [ ] Add opponent sampling modes:
-   - [ ] latest only
-   - [ ] random historical checkpoint
-   - [ ] mix scripted and historical opponents
-5. [ ] Save policy-pool metadata under `reports/` or beside checkpoints.
-6. [ ] Add tests for opponent sampling without running training.
-7. [ ] Run a tiny policy-pool smoke test.
+1. [x] Define a policy-pool data structure.
+2. [x] Add pool entries for scripted policies:
+   - [x] random
+   - [x] safe-rule
+   - [x] draw-only
+3. [x] Add pool entries for RLlib checkpoints:
+   - [x] latest checkpoint
+   - [x] previous checkpoint
+   - [x] best checkpoint by evaluation win rate
+4. [x] Add opponent sampling modes:
+   - [x] latest only
+   - [x] random historical checkpoint
+   - [x] mix scripted and historical opponents
+5. [x] Save policy-pool metadata under `reports/` or beside checkpoints.
+6. [x] Add tests for opponent sampling without running training.
+7. [x] Run a tiny policy-pool smoke test.
 
 ### 9B.5 Frozen Opponent And League Training
 
-Testable outcome: a learner can train against frozen historical policies without overwriting the opponent policy during the same update loop.
+Testable outcome: RLlib policy mapping can progress from shared-policy training to separate seat policies, then to frozen historical opponents, and finally to policy-pool self-play.
 
-1. [ ] Decide whether RLlib should use:
-   - [ ] one trainable shared policy only
-   - [ ] one trainable learner policy plus frozen opponent policies
-   - [ ] separate trainable policies per seat
-2. [ ] Add policy mapping for learner-versus-frozen-opponent training.
-3. [ ] Load frozen opponent checkpoints into RLlib policies.
-4. [ ] Ensure frozen policies do not receive optimizer updates.
-5. [ ] Evaluate current learner against the frozen pool.
-6. [ ] Promote checkpoints into the pool when they beat baselines.
-7. [ ] Add tests for policy mapping and frozen-policy configuration.
+Implementation order:
+
+1. [x] Keep `shared` as the default training mode.
+2. [x] Add `separate-per-seat` next because it is conceptually clean:
+   - [x] `player_1` maps to `player_1_policy`
+   - [x] `player_2` maps to `player_2_policy`
+   - [x] `player_3` maps to `player_3_policy`
+   - [x] all seat policies are trainable
+3. [x] Add a `policy_setup` config section:
+   - [x] `mode`
+   - [x] `seat_policies`
+   - [x] `trainable_policies`
+   - [x] `frozen_policies`
+   - [x] optional `opponent_pool`
+4. [x] Add tests for `shared` policy mapping.
+5. [x] Add tests for `separate-per-seat` policy mapping.
+6. [x] Run a tiny separate-per-seat smoke training job.
+7. [x] Add `learner-vs-frozen` after separate-per-seat works:
+   - [x] one trainable learner policy
+   - [x] one or more frozen RLlib checkpoint policies
+   - [x] scripted opponent seats remain supported in evaluation and pool metadata
+8. [x] Load frozen opponent checkpoints into RLlib policies.
+9. [x] Ensure frozen policies do not receive optimizer updates.
+10. [x] Evaluate current learner against frozen opponents.
+11. [x] Promote checkpoints into the policy pool when they beat baselines.
+12. [x] Add `learner-vs-pool` once frozen policies work:
+   - [x] read policy-pool metadata
+   - [x] sample opponent assignments from the pool
+   - [x] train the learner against sampled frozen checkpoint opponents
+13. [x] Add tests for frozen-policy configuration and policy-pool sampling integration.
+
+Note: train-time `learner-vs-pool` currently requires RLlib checkpoint opponents, so use `latest-only` or `random-historical` pool sampling. Scripted pool entries are still available for evaluation and metadata.
 
 ### 9B.6 Seat-Bias And Robustness Evaluation
 
